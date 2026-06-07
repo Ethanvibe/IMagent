@@ -34,6 +34,12 @@ import {
   startSkillServer,
   stopSkillServer
 } from './skill-server'
+import {
+  verifyActivationCode,
+  getStoredLicense,
+  storeLicense,
+  isActivated
+} from '../core/license'
 const StoreClass = typeof Store === 'function' ? Store : ((Store as any).default as typeof Store)
 
 // Global error handlers — prevent tesseract.js worker thread errors from crashing the app
@@ -639,6 +645,26 @@ app.whenReady().then(async () => {
 
   // ── Skill HTTP Server（OpenClaw 远程启动 / 暂停接入点） ──
   startSkillServer(skillEngineController)
+
+  // ── 激活码 / 许可证 ──
+  ipcMain.handle('license:status', async () => {
+    const info = getStoredLicense((k) => settingsStore.get(k))
+    return { activated: !!info, info }
+  })
+
+  ipcMain.handle('license:activate', async (_event, code: string) => {
+    const result = await verifyActivationCode(code)
+    if (result.valid && result.info) {
+      storeLicense((k, v) => settingsStore.set(k as any, v), result.info)
+      return { success: true, info: result.info }
+    }
+    return { success: false, error: result.error }
+  })
+
+  ipcMain.handle('license:deactivate', async () => {
+    settingsStore.delete('license' as any)
+    return { success: true }
+  })
 
   createWindow()
 

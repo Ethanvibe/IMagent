@@ -21,3 +21,7 @@ out
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# License keygen secrets (NEVER commit)
+scripts/keygen.secret.json
+scripts/keygen.log.json

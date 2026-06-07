@@ -105,6 +105,7 @@ const StopIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="cur
 function App() {
   const isSettingsWindow = new URLSearchParams(window.location.search).get('window') === 'settings'
   const [status, setStatus] = useState<EngineStatus>('idle')
+  const [activated, setActivated] = useState<boolean | null>(null) // null = checking
 
   useEffect(() => {
     const cleanup = window.electron?.on('engine:state', (data: { status: 'running' | 'idle' }) => {
@@ -112,6 +113,24 @@ function App() {
     })
     return cleanup
   }, [])
+
+  // 启动时检查激活状态
+  useEffect(() => {
+    void (async () => {
+      const result = await window.electron?.invoke('license:status')
+      setActivated(!!result?.activated)
+    })()
+  }, [])
+
+  // 还在检查中
+  if (activated === null) {
+    return <div className="app"><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>加载中...</div></div>
+  }
+
+  // 未激活 → 显示激活界面
+  if (!activated) {
+    return <div className="app"><ActivationScreen onActivated={() => setActivated(true)} /><Toast /></div>
+  }
 
   if (isSettingsWindow) {
     return <div className="app settings-window"><MainPage status={status} setStatus={setStatus} /><Toast /></div>
@@ -121,6 +140,67 @@ function App() {
     <div className="app">
       <MainPage status={status} setStatus={setStatus} />
       <Toast />
+    </div>
+  )
+}
+
+/* ─── Activation Screen ─── */
+
+function ActivationScreen({ onActivated }: { onActivated: () => void }) {
+  const [code, setCode] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleActivate = useCallback(async () => {
+    if (!code.trim()) { setError('请输入激活码'); return }
+    setLoading(true)
+    setError('')
+    try {
+      const result = await window.electron?.invoke('license:activate', code.trim())
+      if (result?.success) {
+        showToast('激活成功', 'success')
+        onActivated()
+      } else {
+        setError(result?.error || '激活码无效')
+      }
+    } catch (err: any) {
+      setError('激活失败，请重试')
+    } finally {
+      setLoading(false)
+    }
+  }, [code, onActivated])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32 }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 14,
+        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 20
+      }}>1</div>
+      <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e2e8f0', marginBottom: 6 }}>欢迎使用 1peng</h2>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 28, textAlign: 'center' }}>请输入激活码以开始使用</p>
+      <div style={{ width: '100%', maxWidth: 320 }}>
+        <input
+          className="form-input"
+          type="text"
+          value={code}
+          onChange={(e) => { setCode(e.target.value.toUpperCase()); setError('') }}
+          placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+          disabled={loading}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleActivate() }}
+          style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 13, letterSpacing: 1, marginBottom: 12 }}
+        />
+        {error && <div style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginBottom: 8 }}>{error}</div>}
+        <button
+          className="btn btn-primary"
+          onClick={handleActivate}
+          disabled={loading || !code.trim()}
+          style={{ width: '100%', padding: '10px 0', fontSize: 14, justifyContent: 'center' }}
+        >
+          {loading ? '验证中...' : '激活'}
+        </button>
+      </div>
     </div>
   )
 }
