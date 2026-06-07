@@ -1,0 +1,43 @@
+name: Build macOS
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build macOS app
+        run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 1peng-mac
+          path: dist/*.dmg
+          retention-days: 30
+
+      - name: Upload ZIP artifact (if no DMG)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 1peng-mac-zip
+          path: dist/*.zip
+          retention-days: 30
+          if-no-files-found: ignore

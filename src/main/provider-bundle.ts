@@ -7,8 +7,25 @@ import { ProviderAdapter, ProviderEvent, ProviderInput } from '../core/session-t
 
 export const BUILTIN_DOUBAO_PROVIDER_ID = 'volcengine-ark'
 
+/** 所有内置 provider 的 ID 集合（含 doubao 与新增的 deepseek / minimax / xiaomi） */
+export const BUILTIN_PROVIDER_IDS = [
+  'volcengine-ark',
+  'deepseek',
+  'minimax',
+  'xiaomi'
+] as const
+
+export function isBuiltinProvider(id: string): boolean {
+  return (BUILTIN_PROVIDER_IDS as readonly string[]).includes(id)
+}
+
+/** doubao 是唯一与视觉密钥共享 API Key 的内置 provider */
+export function isDoubaoProvider(id: string): boolean {
+  return id === BUILTIN_DOUBAO_PROVIDER_ID
+}
+
 /**
- * 内置 doubao（火山方舟）provider 的资源目录。
+ * 内置 provider 的资源目录。
  * 打包后 resources/** 会经 asarUnpack，落到 app.asar.unpacked/resources/ 下。
  */
 function getBuiltinProviderDir(id: string): string {
@@ -229,6 +246,50 @@ export async function loadBuiltinDoubaoProvider(
   const installed = await getBuiltinDoubaoInstalledInfo()
   if (!installed) {
     throw new Error('内置 doubao provider 资源缺失')
+  }
+  return loadInstalledProvider(installed, providerConfig)
+}
+
+// ── 通用内置 Provider 辅助函数（deepseek / minimax / xiaomi 等） ──
+
+/** 获取任意内置 provider 的原始 manifest */
+export async function getBuiltinProviderManifestRaw(
+  id: string
+): Promise<ProviderBundleManifest | null> {
+  const dir = getBuiltinProviderDir(id)
+  const manifestFile = path.join(dir, 'manifest.json')
+  try {
+    const content = await readFile(manifestFile, 'utf8')
+    return validateManifest(JSON.parse(content))
+  } catch {
+    return null
+  }
+}
+
+/** 获取任意内置 provider 的 installed 描述 */
+export async function getBuiltinProviderInstalledInfo(
+  id: string
+): Promise<InstalledProviderInfo | null> {
+  const raw = await getBuiltinProviderManifestRaw(id)
+  if (!raw) return null
+  const dir = getBuiltinProviderDir(id)
+  return {
+    id: raw.id,
+    name: raw.name,
+    version: raw.version,
+    entryFile: path.join(dir, raw.entry),
+    installedAt: '0'
+  }
+}
+
+/** 直接加载任意内置 provider */
+export async function loadBuiltinProvider(
+  id: string,
+  providerConfig: Record<string, any>
+): Promise<{ provider: ProviderAdapter; manifest: ProviderBundleManifest }> {
+  const installed = await getBuiltinProviderInstalledInfo(id)
+  if (!installed) {
+    throw new Error(`内置 provider ${id} 资源缺失`)
   }
   return loadInstalledProvider(installed, providerConfig)
 }

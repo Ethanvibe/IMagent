@@ -14,6 +14,7 @@ interface RuntimeHostOptions<TState> {
   provider: ProviderAdapter
   initialState: TState
   onLog?: (type: 'thinking' | 'reply' | 'skip' | 'error', content: string) => void
+  onStop?: (reason?: string) => void
 }
 
 export class RuntimeHost<TState> {
@@ -66,6 +67,7 @@ export class RuntimeHost<TState> {
       this.processingQueue = false
       this.stopping = false
       this.log('skip', '引擎已停止')
+      this.options.onStop?.(_reason)
     }
   }
 

@@ -16,6 +16,8 @@ export interface DesktopDevice {
   // ── 配置 ──
   setAppType(appType: AppType): void
   setApiKey(apiKey: string): void
+  setFriendList?(friendList: string): void
+  setVisionConfig?(config: { baseURL: string; model: string; apiKey: string }): void
 
   // ── 生命周期 ──
   // session 启停时由 GenericChannelSession 调用，给设备机会做缓存初始化 / 清理。
@@ -96,4 +98,21 @@ export interface DesktopDevice {
 
   /** 点击指定坐标 */
   clickAt(x: number, y: number): Promise<void>
+
+  /**
+   * 好友名单专用未读检测：在联系人列表中查找指定好友名字，
+   * 如果找到且有未读标识（红点/气泡），返回该好友的点击坐标。
+   * 可选方法，仅 BoxSelectDevice 实现。
+   */
+  findFriendWithUnread?(friendNames: string[]): Promise<{
+    hasUnread: boolean
+    chatEntranceArea?: { bbox: BBox; coordinates: [number, number] }
+  }>
+
+  /**
+   * 验证当前聊天区域是否为左右双向对话结构（左侧有对方消息气泡，右侧有我的消息气泡）。
+   * 用于排除公众号、文件传输助手等非真实对话。
+   * 可选方法，仅 BoxSelectDevice 实现。
+   */
+  hasLeftRightBubbleStructure?(): Promise<boolean>
 }

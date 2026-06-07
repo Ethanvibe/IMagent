@@ -5,6 +5,8 @@ export interface ProviderInput {
   appType: AppType
   currentContact?: string
   ocrText?: string
+  obsidianPath?: string
+  friendList?: string
 }
 
 export type ProviderEvent =

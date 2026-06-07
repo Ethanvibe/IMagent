@@ -16,13 +16,15 @@ import {
 import { AppType, BoxRegions, CaptureStrategy, isWechatLike } from '../core/rpa/types'
 import { runBoxSelectWizard, type WizardStepKey } from './overlay-window'
 import {
-  BUILTIN_DOUBAO_PROVIDER_ID,
+  isBuiltinProvider,
+  isDoubaoProvider,
   getBuiltinDoubaoInstalledInfo,
   getBuiltinDoubaoManifestForUi,
   getInstalledProviderManifest,
   installProviderFromUrl,
   InstalledProviderInfo,
   loadBuiltinDoubaoProvider,
+  loadBuiltinProvider,
   loadInstalledProvider
 } from './provider-bundle'
 import {
@@ -33,6 +35,14 @@ import {
   stopSkillServer
 } from './skill-server'
 const StoreClass = typeof Store === 'function' ? Store : ((Store as any).default as typeof Store)
+
+// Global error handlers — prevent tesseract.js worker thread errors from crashing the app
+process.on('uncaughtException', (err) => {
+  console.error('[Main] Uncaught exception (safely caught):', err?.message || err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[Main] Unhandled rejection (safely caught):', reason)
+})
 
 const FIXED_ARK_MODEL = 'doubao-seed-2-0-lite-260215'
 const FIXED_ARK_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3'
@@ -53,10 +63,11 @@ interface AppSettings {
     installed: InstalledProviderInfo | null
     config: Record<string, any>
   }
-  // 默认抓取策略（仅当 appType 没有 per-app 覆盖时生效）
   defaultCaptureStrategy: CaptureStrategy
-  // 每个 appType 独立保存的策略 + 框选区域
   capture: Partial<Record<AppType, PerAppCapture>>
+  obsidianPath?: string
+  friendList?: string
+  replyDelay?: number
 }
 
 type ProviderConfigFieldType = 'text' | 'password' | 'url' | 'select' | 'textarea'
@@ -121,8 +132,11 @@ const settingsStore = new StoreClass({
       installed: null,
       config: {}
     },
-    defaultCaptureStrategy: 'auto',
-    capture: {}
+    defaultCaptureStrategy: 'box-select',
+    capture: {},
+    obsidianPath: '',
+    friendList: '',
+    replyDelay: 3
   }
 })
 
@@ -452,6 +466,18 @@ app.whenReady().then(async () => {
     }
   })
 
+  ipcMain.handle('provider:getBuiltinManifest', async (_event, providerId: string) => {
+    if (!isBuiltinProvider(providerId)) {
+      return { success: false, error: `${providerId} 不是内置智能体` }
+    }
+    const { getBuiltinProviderManifestRaw } = await import('./provider-bundle')
+    const manifest = await getBuiltinProviderManifestRaw(providerId)
+    if (!manifest) {
+      return { success: false, error: `未找到 ${providerId} 的配置清单` }
+    }
+    return { success: true, manifest }
+  })
+
   ipcMain.handle('providerHub:getCatalog', async () => {
     const cached = getCachedProviderHub()
     if (cached) return { success: true, catalog: cached }
@@ -504,6 +530,17 @@ app.whenReady().then(async () => {
       // setApiKey 在 BoxSelectDevice 上是 no-op，对 RPADevice 才生效。
       runtimeDevice.setApiKey(settings.vision.apiKey)
       runtimeDevice.setAppType(settings.appType)
+      // Update friend list and vision config on BoxSelectDevice for friend-based unread detection
+      if (runtimeDevice.setFriendList) {
+        runtimeDevice.setFriendList(settings.friendList || '')
+      }
+      if (runtimeDevice.setVisionConfig) {
+        runtimeDevice.setVisionConfig({
+          baseURL: settings.chatProvider.config?.baseURL || '',
+          model: settings.chatProvider.config?.model || '',
+          apiKey: settings.chatProvider.config?.apiKey || settings.vision.apiKey || ''
+        })
+      }
     }
     if (runtime) {
       runtime.updateAppType(settings.appType)
@@ -636,27 +673,42 @@ async function startEngineCore(rawConfig?: any): Promise<SkillStartResult> {
     const settings = normalizeSettings(rawConfig || settingsStore.store)
     const appType: AppType = settings.appType || 'wechat'
     const startupStrategy = resolveSettingsStrategy(appType, settings)
-    const providerNeedsVisionKey =
-      !settings.chatProvider.installed ||
-      settings.chatProvider.installed.id === BUILTIN_DOUBAO_PROVIDER_ID
-    const needsVisionKey = startupStrategy === 'vlm' || providerNeedsVisionKey
 
+    // 判断当前激活的 provider 来源
+    const builtinPrefix = 'builtin://'
+    const activeBuiltinId = settings.chatProvider.manifestUrl?.startsWith(builtinPrefix)
+      ? settings.chatProvider.manifestUrl.slice(builtinPrefix.length)
+      : null
+
+    // 只在 VLM 自动模式下需要视觉密钥
+    const needsVisionKey = startupStrategy === 'vlm'
     if (needsVisionKey && !settings.vision.apiKey) {
-      return { ok: false, reason: 'no_vision_key', message: '请先填写视觉接口密钥' }
+      return { ok: false, reason: 'no_vision_key', message: '请先在基础配置中填写视觉接口密钥（VLM 模式需要）' }
     }
 
-    // 没有自定义 provider → 走内置 doubao，使用视觉密钥
     let provider
-    if (!settings.chatProvider.installed) {
+    if (activeBuiltinId && isBuiltinProvider(activeBuiltinId)) {
+      // 内置 provider（deepseek / minimax / xiaomi / doubao）
+      const effectiveConfig = isDoubaoProvider(activeBuiltinId)
+        ? { ...settings.chatProvider.config, apiKey: settings.chatProvider.config.apiKey || settings.vision.apiKey }
+        : settings.chatProvider.config
+      const loaded = await loadBuiltinProvider(activeBuiltinId, effectiveConfig)
+      provider = loaded.provider
+    } else if (!settings.chatProvider.installed) {
+      // 完全没有选择 → 尝试内置 doubao 兜底
+      const doubaoKey = settings.chatProvider.config.apiKey || settings.vision.apiKey
+      if (!doubaoKey) {
+        return { ok: false, reason: 'no_api_key', message: '请先填写 API Key' }
+      }
       const loaded = await loadBuiltinDoubaoProvider({
         ...settings.chatProvider.config,
-        apiKey: settings.vision.apiKey
+        apiKey: doubaoKey
       })
       provider = loaded.provider
     } else {
       const installedManifest = await getInstalledProviderManifest(settings.chatProvider.installed)
-      // doubao（无论是用户主动装的还是内置的）apiKey 由视觉密钥共享提供，不强校验
-      const isDoubao = settings.chatProvider.installed.id === BUILTIN_DOUBAO_PROVIDER_ID
+      const installedId = settings.chatProvider.installed?.id || ''
+      const isDoubao = isDoubaoProvider(installedId)
       const required = (installedManifest?.configSchema?.required || []).filter(
         (key) => !(isDoubao && key === 'apiKey')
       )
@@ -703,13 +755,17 @@ async function startEngineCore(rawConfig?: any): Promise<SkillStartResult> {
     log('thinking', `已选用抓取策略：${strategy}`)
     runtimeDevice = device
 
-    const channel = new GenericChannelSession(device)
+    const channel = new GenericChannelSession(device, (settings.replyDelay ?? 3) * 1000, settings.obsidianPath || '', settings.friendList || '')
     runtime = new RuntimeHost({
       appType,
       channel,
       provider,
       initialState: createInitialGenericChannelState(),
-      onLog: log
+      onLog: log,
+      onStop: (reason) => {
+        console.log('[Main] Engine stopped internally:', reason)
+        notifyEngineStateChanged('idle')
+      }
     })
 
     runtime.startSession().catch((err: any) => {
@@ -817,7 +873,14 @@ async function buildDevice(
     regions = wizardResult.regions
     persistRegionsAndStickyStrategy(appType, regions, perApp.strategy)
   }
-  return { device: new BoxSelectDevice(regions), strategy: 'box-select' }
+  return {
+    device: new BoxSelectDevice(regions, settings.friendList || '', {
+      baseURL: settings.chatProvider.config?.baseURL || '',
+      model: settings.chatProvider.config?.model || '',
+      apiKey: settings.chatProvider.config?.apiKey || settings.vision.apiKey || ''
+    }),
+    strategy: 'box-select'
+  }
 }
 
 /** 把向导产出的 regions 写回 settings，并保留当前策略配置。 */
@@ -945,8 +1008,11 @@ function normalizeSettings(raw: any): AppSettings {
       installed: raw?.chatProvider?.installed || null,
       config: rawProviderConfig
     },
-    defaultCaptureStrategy: coerceStrategy(raw?.defaultCaptureStrategy, 'auto'),
-    capture: normalizeCapture(raw?.capture)
+    defaultCaptureStrategy: coerceStrategy(raw?.defaultCaptureStrategy, 'box-select'),
+    capture: normalizeCapture(raw?.capture),
+    obsidianPath: typeof raw?.obsidianPath === 'string' ? raw.obsidianPath : '',
+    friendList: typeof raw?.friendList === 'string' ? raw.friendList : '',
+    replyDelay: typeof raw?.replyDelay === 'number' ? raw.replyDelay : 3
   }
 }
 

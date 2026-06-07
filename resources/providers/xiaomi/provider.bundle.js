@@ -2,8 +2,8 @@ import { createRequire } from 'node:module'
 
 const _require = createRequire(import.meta.url)
 
-const DEFAULT_MODEL = 'doubao-seed-2-0-lite-260215'
-const DEFAULT_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3'
+const DEFAULT_MODEL = 'mimo-v1'
+const DEFAULT_BASE_URL = 'https://api.xiaomi.com/v1'
 const DEFAULT_PROMPT = `你是一个智能聊天助手。根据提供的聊天内容，生成合适的回复。
 
 ## 规则
@@ -28,7 +28,7 @@ const TEXT_MODE_PROMPT = `你是一个智能聊天助手。根据提供的聊天
 6. 如果不确定是否需要回复，就生成一条简短友好的回复`
 
 export const manifest = {
-  id: 'volcengine-ark',
+  id: 'xiaomi',
   apiVersion: 1
 }
 
@@ -221,7 +221,6 @@ async function extractMessageFromScreenshot(screenshot, apiKey, model, baseURL) 
         { type: 'image_url', image_url: { url: imageUrl } },
         { type: 'text', text: '请只提取截图中聊天窗口里对方（左侧气泡）发来的最后一条消息的文字内容。只输出消息文字，不要任何解释、前缀或引号。如果看不到对方消息，回复"无"。' }
       ]}],
-      thinking: { type: 'disabled' },
       stream: false
     }
     const response = await fetch(`${baseURL}/chat/completions`, {
@@ -279,12 +278,7 @@ async function requestReply({ screenshot, ocrText, apiKey, model, baseURL, syste
     { type: 'text', text: '请根据截图中聊天窗口的最新消息进行回复。注意：左侧气泡是对方发的消息，右侧气泡是我发的消息。' }
   ]
 
-  const body = {
-    model,
-    messages: [{ role: 'system', content: prompt + knowledgeContext }, { role: 'user', content: userContent }],
-    thinking: { type: 'disabled' },
-    stream: false
-  }
+  const body = { model, messages: [{ role: 'system', content: prompt + knowledgeContext }, { role: 'user', content: userContent }], stream: false }
 
   let response = await fetch(`${baseURL}/chat/completions`, {
     method: 'POST',
@@ -302,7 +296,6 @@ async function requestReply({ screenshot, ocrText, apiKey, model, baseURL, syste
           { role: 'system', content: TEXT_MODE_PROMPT + knowledgeContext },
           { role: 'user', content: `以下是从聊天窗口截图中识别出的文字内容：\n\n${ocrText}\n\n请根据以上聊天内容生成回复。` }
         ],
-        thinking: { type: 'disabled' },
         stream: false
       }
       response = await fetch(`${baseURL}/chat/completions`, {
@@ -318,7 +311,6 @@ async function requestReply({ screenshot, ocrText, apiKey, model, baseURL, syste
           { role: 'system', content: TEXT_MODE_PROMPT + knowledgeContext },
           { role: 'user', content: '请生成一条自然、友好的简短回复消息，用于日常聊天场景。不需要针对特定内容，只需要一条通用的友好回复。' }
         ],
-        thinking: { type: 'disabled' },
         stream: false
       }
       response = await fetch(`${baseURL}/chat/completions`, {

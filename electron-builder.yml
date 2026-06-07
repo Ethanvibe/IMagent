@@ -1,5 +1,5 @@
-appId: com.sightflow.desktop
-productName: SightFlow
+appId: com.1peng.desktop
+productName: 1peng
 directories:
   buildResources: build
 files:
@@ -11,10 +11,12 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+  - node_modules/tesseract.js/**
+  - node_modules/tesseract.js-core/**
 win:
-  executableName: SightFlow
+  executableName: 1peng
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: 1peng-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always

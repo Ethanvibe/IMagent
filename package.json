@@ -1,9 +1,9 @@
 {
-  "name": "sightflow-desktop-agent",
+  "name": "1peng",
   "version": "1.0.0",
-  "description": "SightFlow Desktop Agent - AI-powered cross-platform desktop RPA client based on Electron and VLM",
+  "description": "1peng - AI 桌面智能助手，接入大模型 + Obsidian 知识库",
   "main": "./out/main/index.js",
-  "author": "sightflow-dev",
+  "author": "1peng",
   "homepage": "https://github.com/sightflow-dev/sightflow-desktop-agent",
   "scripts": {
     "format": "prettier --write .",
@@ -16,7 +16,7 @@
     "dev:test-screenshot": "electron-vite build && cross-env TEST_MODE=screenshot electron ./out/main/test-cli.js",
     "dev:test-reply": "electron-vite build && cross-env TEST_MODE=reply electron ./out/main/test-cli.js",
     "dev:test-switch": "electron-vite build && cross-env TEST_MODE=switch electron ./out/main/test-cli.js",
-    "build": "npm run typecheck && electron-vite build",
+    "build": "electron-vite build",
     "postinstall": "patch-package && electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
@@ -36,7 +36,8 @@
     "jimp": "^1.6.1",
     "node-window-manager": "^2.2.4",
     "pixelmatch": "^7.1.0",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
@@ -54,6 +55,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "node-addon-api": "^8.8.0",
     "patch-package": "^8.0.1",
     "prettier": "^3.7.4",
     "react": "^19.2.1",

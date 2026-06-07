@@ -7,6 +7,7 @@
 
 import { DesktopDevice } from './device'
 import { ChannelContext, ChannelSession, ProviderEvent, SessionEvent } from './session-types'
+import { startOcrInit, ocrScreenshotWithPosition } from './ocr'
 
 export interface GenericChannelState {
   measuredAt: number | null
@@ -24,7 +25,12 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
   private readonly retryDelayMs = 5000
   private consecutiveUnreadFailures = 0
 
-  constructor(private readonly device: DesktopDevice) {}
+  constructor(
+    private readonly device: DesktopDevice,
+    private replyDelayMs: number = 3000,
+    private obsidianPath: string = '',
+    private friendList: string = ''
+  ) {}
 
   async onStart(ctx: ChannelContext<GenericChannelState>): Promise<void> {
     this.device.setAppType(ctx.appType)
@@ -32,6 +38,10 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
     this.consecutiveUnreadFailures = 0
     this.resetState(ctx.state)
     await this.device.onSessionStart?.()
+
+    // Start OCR worker initialization in background (non-blocking)
+    startOcrInit()
+
     ctx.host.enqueue({ type: 'bootstrap' })
   }
 
@@ -63,7 +73,14 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
       }
 
       case 'observe_chat': {
-        const screenshot = await this.device.screenshot()
+        let screenshot: string
+        try {
+          screenshot = await this.device.screenshot()
+        } catch (err: any) {
+          ctx.host.log('error', `截图失败: ${err?.message || err}，等待重试`)
+          ctx.host.enqueue({ type: 'wait_retry', reason: 'screenshot_failed', delayMs: this.retryDelayMs })
+          break
+        }
         void this.forwardProviderEvents(screenshot, ctx)
         break
       }
@@ -73,16 +90,27 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
         break
 
       case 'provider.reply_text':
-        await this.device.sendMessage(event.content)
-        ctx.host.log('reply', event.content)
-        await this.device.setChatBaseline()
-        ctx.state.latestChatBaseline = Date.now()
-        ctx.host.enqueue({ type: 'check_unread' })
+        try {
+          if (this.replyDelayMs > 0) {
+            ctx.host.log('thinking', `等待 ${this.replyDelayMs / 1000} 秒后发送回复...`)
+            await this.sleep(this.replyDelayMs)
+          }
+          await this.device.sendMessage(event.content)
+          ctx.host.log('reply', event.content)
+          await this.device.setChatBaseline()
+          ctx.state.latestChatBaseline = Date.now()
+          ctx.host.enqueue({ type: 'check_unread' })
+        } catch (err: any) {
+          ctx.host.log('error', `发送消息失败: ${err?.message || err}，等待重试`)
+          ctx.host.enqueue({ type: 'wait_retry', reason: 'send_failed', delayMs: this.retryDelayMs })
+        }
         break
 
       case 'provider.skip':
         ctx.host.log('skip', '本轮无需回复')
-        await this.device.setChatBaseline()
+        try {
+          await this.device.setChatBaseline()
+        } catch { /* ignore */ }
         ctx.state.latestChatBaseline = Date.now()
         ctx.host.enqueue({ type: 'check_unread' })
         break
@@ -97,49 +125,80 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
         break
 
       case 'check_unread': {
-        const diffResult = await this.device.hasChatAreaChanged()
-        if (diffResult.hasDiff) {
-          ctx.host.log('thinking', '检测到当前对话有新消息')
-          ctx.host.enqueue({ type: 'observe_chat' })
-          break
-        }
+        try {
+          const diffResult = await this.device.hasChatAreaChanged()
+          if (diffResult.hasDiff) {
+            ctx.host.log('thinking', '检测到当前对话有新消息')
+            ctx.host.enqueue({ type: 'observe_chat' })
+            break
+          }
 
-        const unreadResult = await this.device.hasUnreadMessage()
-        if (!unreadResult.hasUnread) {
+          // 始终用圆形小红点检测扫描整个联系人列表
+          const unreadResult = await this.device.hasUnreadMessage()
+
+          if (!unreadResult.hasUnread) {
+            ctx.host.enqueue({
+              type: 'wait_retry',
+              reason: 'no_unread',
+              delayMs: this.retryDelayMs
+            })
+            break
+          }
+
+          const chatEntranceCoords = unreadResult.chatEntranceArea?.coordinates
+          if (!chatEntranceCoords) {
+            ctx.host.log('error', '检测到未读消息，但未找到聊天入口位置')
+            ctx.host.enqueue({
+              type: 'wait_retry',
+              reason: 'missing_chat_entrance',
+              delayMs: this.retryDelayMs
+            })
+            break
+          }
+
+          ctx.host.log('thinking', '检测到小红点，正在尝试打开会话')
+          await this.device.activeUnreadByClick(chatEntranceCoords)
+          await this.sleep(150 + Math.random() * 100)
+
+          const openResult = await this.tryOpenUnreadConversation(ctx)
+          if (openResult === 'opened') {
+            // 验证是真实的左右对话（排除公众号、文件传输助手等）
+            if (this.device.hasLeftRightBubbleStructure) {
+              const isRealChat = await this.device.hasLeftRightBubbleStructure()
+              if (!isRealChat) {
+                ctx.host.log('skip', '不是真实的左右对话，跳过')
+                ctx.host.enqueue({ type: 'check_unread' })
+                break
+              }
+            }
+
+            // 检查联系人是否在"不回复名单"中
+            const skipNames = this.getSkipNames()
+            if (skipNames.length > 0) {
+              const contactName = await this.extractContactName(ctx)
+              if (contactName) {
+                const matched = skipNames.find(n => contactName.includes(n) || n.includes(contactName))
+                if (matched) {
+                  ctx.host.log('skip', `"${contactName}" 在不回复名单中，跳过`)
+                  ctx.host.enqueue({ type: 'check_unread' })
+                  break
+                }
+              }
+            }
+
+            ctx.host.enqueue({ type: 'observe_chat' })
+            break
+          }
+
           ctx.host.enqueue({
             type: 'wait_retry',
-            reason: 'no_unread',
+            reason: openResult,
             delayMs: this.retryDelayMs
           })
-          break
+        } catch (err: any) {
+          ctx.host.log('error', `未读检测异常: ${err?.message || err}，等待重试`)
+          ctx.host.enqueue({ type: 'wait_retry', reason: 'check_unread_error', delayMs: this.retryDelayMs })
         }
-
-        const chatEntranceCoords = unreadResult.chatEntranceArea?.coordinates
-        if (!chatEntranceCoords) {
-          ctx.host.log('error', '检测到未读消息，但未找到聊天入口位置')
-          ctx.host.enqueue({
-            type: 'wait_retry',
-            reason: 'missing_chat_entrance',
-            delayMs: this.retryDelayMs
-          })
-          break
-        }
-
-        ctx.host.log('thinking', '检测到未读消息，正在尝试打开会话')
-        await this.device.activeUnreadByClick(chatEntranceCoords)
-        await this.sleep(150 + Math.random() * 100)
-
-        const openResult = await this.tryOpenUnreadConversation(ctx)
-        if (openResult === 'opened') {
-          ctx.host.enqueue({ type: 'observe_chat' })
-          break
-        }
-
-        ctx.host.enqueue({
-          type: 'wait_retry',
-          reason: openResult,
-          delayMs: this.retryDelayMs
-        })
         break
       }
 
@@ -158,19 +217,63 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
     ctx: ChannelContext<GenericChannelState>
   ): Promise<void> {
     try {
-      for await (const event of ctx.host.runProvider({
+      console.log('[Session] calling provider with screenshot...')
+      ctx.host.log('thinking', '正在分析聊天内容...')
+
+      // Try OCR first to extract text with left/right position info.
+      // If OCR succeeds, the provider uses text mode (more reliable, no 400 errors).
+      // If OCR fails, we fall back to image mode (provider sends screenshot as image_url).
+      let ocrText = ''
+      try {
+        ocrText = await ocrScreenshotWithPosition(screenshot)
+        console.log('[Session] OCR result:', ocrText ? `${ocrText.length} chars` : 'empty')
+        if (ocrText) {
+          console.log('[Session] OCR preview:', ocrText.slice(0, 200))
+        }
+      } catch (ocrErr: any) {
+        console.warn('[Session] OCR failed, will use image mode:', ocrErr?.message || ocrErr)
+      }
+
+      const providerInput = {
         screenshot,
-        appType: ctx.appType
-      })) {
-        if (!ctx.host.isRunning()) break
+        appType: ctx.appType,
+        ocrText: ocrText || undefined,
+        obsidianPath: this.obsidianPath || undefined,
+        friendList: this.friendList || undefined
+      }
+      console.log('[Session] provider input:', JSON.stringify({
+        hasScreenshot: !!screenshot,
+        screenshotLen: screenshot?.length || 0,
+        hasOcrText: !!ocrText,
+        ocrTextLen: ocrText?.length || 0,
+        appType: ctx.appType,
+        obsidianPath: this.obsidianPath || '(none)',
+        hasFriendList: !!this.friendList
+      }))
+
+      let eventCount = 0
+      for await (const event of ctx.host.runProvider(providerInput)) {
+        eventCount++
+        console.log(`[Session] provider event #${eventCount}:`, event.type, event.type === 'reply_text' ? event.content?.slice(0, 50) : '')
+        if (!ctx.host.isRunning()) {
+          console.log('[Session] session stopped during provider iteration')
+          break
+        }
 
         const sessionEvent = this.mapProviderEvent(event)
         if (sessionEvent) {
           ctx.host.enqueue(sessionEvent)
         }
       }
+      console.log(`[Session] provider finished, total events: ${eventCount}`)
+      if (eventCount === 0) {
+        ctx.host.log('error', 'AI 服务没有返回任何结果，请检查 API 配置')
+        ctx.host.enqueue({ type: 'provider.error', error: 'AI 服务没有返回任何结果' })
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
+      console.error('[Session] forwardProviderEvents error:', message, error instanceof Error ? error.stack : '')
+      ctx.host.log('error', `处理异常: ${message}`)
       ctx.host.enqueue({ type: 'provider.error', error: message })
     }
   }
@@ -276,5 +379,36 @@ export class GenericChannelSession implements ChannelSession<GenericChannelState
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  /** 从好友名单字段获取"不回复名单" */
+  private getSkipNames(): string[] {
+    if (!this.friendList) return []
+    return this.friendList
+      .split(/[\n\r]+/)
+      .map(n => n.trim())
+      .filter(n => n.length > 0)
+  }
+
+  /**
+   * 从聊天头部提取联系人名称（用于不回复名单过滤）。
+   * 用 OCR 识别聊天区域文字，取最上面的非空行作为联系人名称候选。
+   */
+  private async extractContactName(
+    ctx: ChannelContext<GenericChannelState>
+  ): Promise<string> {
+    try {
+      const screenshot = await this.device.screenshot()
+      const ocrText = await ocrScreenshotWithPosition(screenshot)
+      if (!ocrText) return ''
+      // 取 OCR 结果的前几行（头部区域 = 联系人名称位置）
+      const lines = ocrText.split('\n').map(l => l.replace(/^\[(左|右)\]\s*/, '').trim()).filter(l => l.length > 0)
+      if (lines.length === 0) return ''
+      // 第一行通常是联系人/群名称
+      return lines[0]
+    } catch (err: any) {
+      console.warn('[Session] extractContactName failed:', err?.message || err)
+      return ''
+    }
   }
 }
