@@ -2,7 +2,7 @@
 
 **AI 桌面聊天助手** — 自动检测未读消息、智能分析对话、生成回复并发送。
 
-基于 [SightFlow](https://sightflow.dev) 开源项目二次开发，支持微信、企业微信、钉钉、飞书、Slack、Telegram 等主流桌面聊天应用。
+支持微信、企业微信、钉钉、飞书、Slack、Telegram 等主流桌面聊天应用。引擎启动后自动扫描联系人列表中的小红点，逐一点击进入聊天窗口，分析对话内容后生成自然回复，直到所有未读消息全部处理完毕。
 
 ## 核心特性
 
@@ -14,9 +14,16 @@
 
 **多模型 Provider** — 内置 DeepSeek、MiniMax、小米 MiMo、豆包 Seed 四个大模型 Provider，可自由切换。Provider 架构支持通过 `manifest.json` 声明式接入新模型。
 
-**Obsidian 知识库** — 可指定本地 Obsidian Vault 路径，模型生成回复时会检索相关笔记作为上下文（RAG），让回复更贴合你的知识体系。
+**Obsidian 知识库（RAG）** — 可指定本地 Obsidian Vault 路径，模型生成回复时会检索相关笔记作为上下文，让回复更贴合你的知识体系。
 
 **延迟回复** — 生成回复后等待指定秒数再发送，模拟真人思考节奏，避免秒回显得过于机械。
+
+## 下载安装
+
+前往 [Releases](https://github.com/letoneroc-maker/IMagent/releases) 页面下载最新安装包：
+
+- **Windows** — `1peng-1.0.0-setup.exe`
+- **macOS** — `1peng-1.0.0.dmg`
 
 ## 技术栈
 
@@ -146,4 +153,4 @@ src/
 
 ## 许可
 
-基于 [SightFlow](https://sightflow.dev) 开源项目。
+MIT License
