@@ -150,6 +150,8 @@ function ActivationScreen({ onActivated }: { onActivated: () => void }) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPurchase, setShowPurchase] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const handleActivate = useCallback(async () => {
     if (!code.trim()) { setError('请输入激活码'); return }
@@ -170,8 +172,15 @@ function ActivationScreen({ onActivated }: { onActivated: () => void }) {
     }
   }, [code, onActivated])
 
+  const copyWechat = useCallback(() => {
+    navigator.clipboard.writeText('Roooxo').then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }, [])
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32, position: 'relative' }}>
       <div style={{
         width: 48, height: 48, borderRadius: 14,
         background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -200,7 +209,63 @@ function ActivationScreen({ onActivated }: { onActivated: () => void }) {
         >
           {loading ? '验证中...' : '激活'}
         </button>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <span
+            onClick={() => setShowPurchase(true)}
+            style={{ fontSize: 13, color: '#818cf8', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
+          >购买激活码</span>
+        </div>
       </div>
+
+      {/* Purchase Modal */}
+      {showPurchase && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 999, padding: 24
+        }} onClick={() => setShowPurchase(false)}>
+          <div style={{
+            background: '#1a1d28', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 16, padding: '32px 28px', maxWidth: 340, width: '100%',
+            textAlign: 'center'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              display: 'inline-block', background: 'rgba(239,68,68,0.12)',
+              color: '#f87171', fontSize: 11, fontWeight: 700,
+              padding: '3px 10px', borderRadius: 100, marginBottom: 16
+            }}>限时优惠</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#e2e8f0', marginBottom: 6 }}>专业版 · 一次买断</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+              <span style={{ fontSize: 16, color: '#64748b', textDecoration: 'line-through' }}>¥188</span>
+              <span style={{ fontSize: 40, fontWeight: 800, background: 'linear-gradient(135deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>¥66</span>
+            </div>
+            <div style={{
+              background: '#12141e', border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: 12, padding: 16, marginBottom: 20
+            }}>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>添加客服微信购买</div>
+              <div
+                onClick={copyWechat}
+                style={{
+                  fontSize: 22, fontWeight: 700, color: copied ? '#22c55e' : '#e2e8f0',
+                  fontFamily: 'monospace', letterSpacing: 1, cursor: 'pointer',
+                  transition: 'color 0.2s'
+                }}
+              >{copied ? '已复制 ✓' : 'Roooxo'}</div>
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 6 }}>{copied ? '去微信搜索添加吧' : '点击复制微信号'}</div>
+            </div>
+            <button
+              onClick={() => setShowPurchase(false)}
+              style={{
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8, padding: '8px 24px', fontSize: 13,
+                color: '#94a3b8', cursor: 'pointer'
+              }}
+            >关闭</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
