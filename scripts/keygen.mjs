@@ -76,7 +76,7 @@ function generateCode(secretKey) {
   // 组合: [4 bytes ID] + [10 bytes check] = 14 bytes
   const payload = Buffer.concat([idBytes, checkBytes])
 
-  // Base32 编码 → 25 字符 → 格式化为 XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+  // Base32 编码 → 23 字符 → 格式化为 XXXXX-XXXXX-XXXXX-XXXXX-XXX
   const raw = b32Encode(payload)
   const formatted = raw.match(/.{1,5}/g).join('-')
 

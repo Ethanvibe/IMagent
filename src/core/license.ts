@@ -1,8 +1,8 @@
 // src/core/license.ts
 // HMAC-SHA256 离线激活码验证模块
 //
-// 激活码格式: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX (25字符，5组5位)
-// 内部结构: [4字节随机ID] + [10字节HMAC校验] = 14字节 → base32 → 25字符
+// 激活码格式: XXXXX-XXXXX-XXXXX-XXXXX-XXX (23字符)
+// 内部结构: [4字节随机ID] + [10字节SHA256校验] = 14字节 → base32 → 23字符
 //
 // 生成端 (keygen.mjs): 持有完整密钥，用 HMAC-SHA256 生成激活码
 // 验证端 (本文件): 嵌入同一密钥，验证激活码的 HMAC 是否匹配
@@ -69,8 +69,8 @@ export async function verifyActivationCode(code: string): Promise<{
 }> {
   try {
     const raw = parseKey(code)
-    if (raw.length !== 25) {
-      return { valid: false, error: '激活码格式错误，应为 XXXXX-XXXXX-XXXXX-XXXXX-XXXXX' }
+    if (raw.length !== 23) {
+      return { valid: false, error: '激活码格式错误，应为 XXXXX-XXXXX-XXXXX-XXXXX-XXX' }
     }
 
     const payload = b32Decode(raw)

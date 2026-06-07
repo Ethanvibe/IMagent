@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1peng 激活码生成器</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#0f1117;--card:#1a1d28;--border:#2a2d3a;--text:#e4e6f0;--dim:#8b8fa3;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--mono:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+  .container{max-width:720px;margin:0 auto}
+  h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:6px}
+  .subtitle{text-align:center;color:var(--dim);font-size:13px;margin-bottom:32px}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+  .panel-title{font-size:13px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+  .row{display:flex;gap:10px;align-items:center}
+  input[type=number]{background:#12141e;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 14px;width:100px;outline:none;font-family:var(--mono)}
+  input[type=number]:focus{border-color:var(--accent)}
+  button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+  button:hover{background:var(--accent2)}
+  button:active{transform:scale(.98)}
+  button.secondary{background:transparent;border:1px solid var(--border);color:var(--dim)}
+  button.secondary:hover{border-color:var(--accent);color:var(--text)}
+  button.sm{padding:6px 12px;font-size:12px;border-radius:6px}
+  .codes{margin-top:16px}
+  .code-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#12141e;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;transition:border-color .15s}
+  .code-item:hover{border-color:var(--accent)}
+  .code-text{font-family:var(--mono);font-size:15px;letter-spacing:.5px;cursor:default;user-select:all}
+  .code-meta{display:flex;align-items:center;gap:8px}
+  .code-id{font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .copied{color:var(--green);font-size:12px;opacity:0;transition:opacity .3s}
+  .copied.show{opacity:1}
+  .actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+  .stats{display:flex;gap:20px;margin-top:12px}
+  .stat{font-size:12px;color:var(--dim)}
+  .stat b{color:var(--text);font-weight:600}
+  .verify-section{margin-top:8px}
+  .verify-input{background:#12141e;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 14px;width:100%;font-family:var(--mono);outline:none;letter-spacing:.5px}
+  .verify-input:focus{border-color:var(--accent)}
+  .verify-result{margin-top:8px;padding:8px 12px;border-radius:6px;font-size:13px;display:none}
+  .verify-result.valid{display:block;background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+  .verify-result.invalid{display:block;background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+  .badge-ok{background:rgba(34,197,94,.15);color:var(--green)}
+  .empty{text-align:center;padding:24px;color:var(--dim);font-size:13px}
+  .footer{text-align:center;color:var(--dim);font-size:11px;margin-top:24px;opacity:.6}
+  @media(max-width:480px){body{padding:12px}.code-text{font-size:13px}.code-item{flex-wrap:wrap;gap:6px}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>1peng 激活码生成器</h1>
+  <p class="subtitle">纯本地运行 · HMAC-SHA256 · 与 1peng 应用完全兼容</p>
+
+  <div class="panel">
+    <div class="panel-title">生成激活码</div>
+    <div class="row">
+      <input type="number" id="count" min="1" max="200" value="5" placeholder="数量">
+      <button onclick="generate()">生成</button>
+      <span style="flex:1"></span>
+      <span class="stats" id="stats"></span>
+    </div>
+    <div class="codes" id="codes">
+      <div class="empty">输入数量后点击「生成」</div>
+    </div>
+    <div class="actions" id="actions" style="display:none">
+      <button class="secondary sm" onclick="copyAll()">复制全部</button>
+      <button class="secondary sm" onclick="exportCSV()">导出 CSV</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">验证激活码</div>
+    <div class="verify-section">
+      <input class="verify-input" id="verifyInput" placeholder="输入激活码，如 XXXXX-XXXXX-XXXXX-XXXXX-XXX" spellcheck="false" autocomplete="off">
+      <div class="verify-result" id="verifyResult"></div>
+    </div>
+  </div>
+
+  <p class="footer">此工具仅限卖方使用 · 密钥切勿泄露 · 文件仅本地运行</p>
+</div>
+
+<script>
+// ── 密钥（与 keygen.secret.json / license.ts 一致）──
+const SECRET_KEY_B64 = 'XYQR6B8wGiSirl+QaqfZ3CutiKBzCiPZHU6miQogKpU=';
+
+// ── Base32 ──
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function b32Encode(buf) {
+  let bits = 0, value = 0, out = '';
+  for (const byte of buf) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += B32[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += B32[(value << (5 - bits)) & 31];
+  return out;
+}
+function b32Decode(str) {
+  const clean = str.replace(/[^A-Z2-7]/gi, '').toUpperCase();
+  let bits = 0, value = 0;
+  const bytes = [];
+  for (const ch of clean) {
+    const idx = B32.indexOf(ch);
+    if (idx < 0) return null;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return new Uint8Array(bytes);
+}
+
+// ── 工具函数 ──
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+function hexEncode(buf) {
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function concatBytes(...arrays) {
+  const total = arrays.reduce((s, a) => s + a.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const a of arrays) { out.set(a, offset); offset += a.length; }
+  return out;
+}
+
+// ── SHA-256 (与 Node.js createHash('sha256') 一致) ──
+async function sha256(data) {
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return new Uint8Array(hash);
+}
+
+// ── 生成随机字节 ──
+function randomBytes(n) {
+  return crypto.getRandomValues(new Uint8Array(n));
+}
+
+// ── 密钥缓存 ──
+const keyBuf = b64ToBytes(SECRET_KEY_B64);
+
+// ── 生成一个激活码 ──
+async function generateCode() {
+  const idBytes = randomBytes(4);
+  const input = concatBytes(keyBuf, idBytes);
+  const hmac = await sha256(input);
+  const checkBytes = hmac.slice(0, 10);
+  const payload = concatBytes(idBytes, checkBytes);
+  const raw = b32Encode(payload);
+  const formatted = raw.match(/.{1,5}/g).join('-');
+  return { id: hexEncode(idBytes), code: formatted, raw };
+}
+
+// ── 验证一个激活码 ──
+async function verifyCode(input) {
+  const clean = input.replace(/[^A-Z2-7]/gi, '').toUpperCase();
+  if (clean.length !== 23) return { valid: false, error: '格式错误，应为 23 位字符' };
+  const payload = b32Decode(clean);
+  if (!payload || payload.length < 14) return { valid: false, error: '数据不完整' };
+  const idBytes = payload.slice(0, 4);
+  const checkBytes = payload.slice(4, 14);
+  const hashInput = concatBytes(keyBuf, idBytes);
+  const hmac = await sha256(hashInput);
+  const expected = hmac.slice(0, 10);
+  let match = true;
+  for (let i = 0; i < 10; i++) { if (checkBytes[i] !== expected[i]) { match = false; break; } }
+  if (!match) return { valid: false, error: '激活码无效' };
+  return { valid: true, id: hexEncode(idBytes) };
+}
+
+// ── 状态 ──
+let allCodes = [];
+
+// ── 生成 ──
+async function generate() {
+  const n = Math.min(200, Math.max(1, parseInt(document.getElementById('count').value) || 1));
+  const container = document.getElementById('codes');
+  container.innerHTML = '<div class="empty">生成中...</div>';
+  const newCodes = [];
+  for (let i = 0; i < n; i++) {
+    const c = await generateCode();
+    newCodes.push({ ...c, time: new Date().toISOString() });
+  }
+  allCodes = [...allCodes, ...newCodes];
+  renderCodes(newCodes);
+  document.getElementById('actions').style.display = 'flex';
+  document.getElementById('stats').innerHTML = `<span class="stat">本次 <b>${newCodes.length}</b> 个</span><span class="stat">累计 <b>${allCodes.length}</b> 个</span>`;
+}
+
+function renderCodes(codes) {
+  const container = document.getElementById('codes');
+  container.innerHTML = '';
+  codes.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'code-item';
+    div.innerHTML = `
+      <span class="code-text">${c.code}</span>
+      <div class="code-meta">
+        <span class="code-id">#${c.id}</span>
+        <button class="secondary sm" onclick="copyCode(this,'${c.code}')">复制</button>
+        <span class="copied">已复制</span>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+// ── 复制 ──
+async function copyCode(btn, code) {
+  await navigator.clipboard.writeText(code);
+  const hint = btn.nextElementSibling;
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 1500);
+}
+
+async function copyAll() {
+  const text = allCodes.map(c => c.code).join('\n');
+  await navigator.clipboard.writeText(text);
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '已复制全部';
+  btn.style.color = '#22c55e';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+}
+
+// ── 导出 CSV ──
+function exportCSV() {
+  let csv = '序号,激活码,ID,生成时间\n';
+  allCodes.forEach((c, i) => {
+    csv += `${i + 1},${c.code},${c.id},${c.time}\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `1peng-activations-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+}
+
+// ── 验证 ──
+document.getElementById('verifyInput').addEventListener('input', async function() {
+  const result = document.getElementById('verifyResult');
+  const val = this.value.trim();
+  if (!val) { result.className = 'verify-result'; result.style.display = 'none'; return; }
+  if (val.replace(/[^A-Z2-7]/gi, '').length < 23) { result.className = 'verify-result'; result.style.display = 'none'; return; }
+  const v = await verifyCode(val);
+  if (v.valid) {
+    result.className = 'verify-result valid';
+    result.innerHTML = `✓ 激活码有效 · ID: ${v.id}`;
+  } else {
+    result.className = 'verify-result invalid';
+    result.textContent = `✗ ${v.error}`;
+  }
+});
+</script>
+</body>
+</html>

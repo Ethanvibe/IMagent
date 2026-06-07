@@ -186,7 +186,7 @@ function ActivationScreen({ onActivated }: { onActivated: () => void }) {
           type="text"
           value={code}
           onChange={(e) => { setCode(e.target.value.toUpperCase()); setError('') }}
-          placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+          placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXX"
           disabled={loading}
           onKeyDown={(e) => { if (e.key === 'Enter') handleActivate() }}
           style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 13, letterSpacing: 1, marginBottom: 12 }}
