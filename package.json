@@ -1,6 +1,6 @@
 {
   "name": "1peng",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "1peng - AI 桌面智能助手，接入大模型 + Obsidian 知识库",
   "main": "./out/main/index.js",
   "author": "1peng",
