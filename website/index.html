@@ -5,178 +5,246 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>1peng — AI 桌面聊天助手</title>
 <meta name="description" content="自动消灭小红点，智能回复每一条消息。支持微信、钉钉、飞书等主流聊天应用。">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#0a0a1a">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='22' width='100' height='100' fill='%236366f1'/><text x='50' y='68' text-anchor='middle' font-size='56' font-weight='800' fill='white' font-family='system-ui'>1</text></svg>">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#ffffff;--bg2:#f8f9fb;--bg3:#f1f3f7;
-  --text:#1a1a2e;--text2:#5a5f7a;--text3:#8b90a5;
-  --accent:#6366f1;--accent2:#818cf8;--accent-soft:rgba(99,102,241,0.08);
-  --border:rgba(0,0,0,0.06);
-  --shadow-sm:0 1px 3px rgba(0,0,0,0.04);
-  --shadow-md:0 4px 20px rgba(0,0,0,0.06);
-  --shadow-lg:0 12px 40px rgba(0,0,0,0.08);
-  --radius:16px;--radius-sm:12px;
+  --bg:#0a0a1a;--bg2:#0f0f24;--surface:#14142a;--surface2:#1c1c38;
+  --text:#e8e8f4;--text2:#8888aa;--text3:#555570;
+  --accent:#7c3aed;--accent2:#a78bfa;--accent-glow:rgba(124,58,237,0.35);
+  --cyan:#22d3ee;--pink:#f472b6;--green:#34d399;--red:#ef4444;--amber:#fbbf24;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --glass:rgba(255,255,255,0.03);--glass2:rgba(255,255,255,0.06);
+  --radius:20px;--radius-sm:14px;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif;
 }
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-.container{max-width:1120px;margin:0 auto;padding:0 24px}
+a{color:inherit;text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
 
-/* Nav */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 24px;background:rgba(255,255,255,0.82);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
-nav.scrolled{box-shadow:var(--shadow-sm)}
-nav .inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.logo-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff}
-.logo-text{font-size:17px;font-weight:700;color:var(--text)}
+/* ═══ Animated BG ═══ */
+.bg-wrap{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.35;will-change:transform}
+.blob-1{width:600px;height:600px;background:var(--accent);top:-200px;left:-100px;animation:blobA 22s ease-in-out infinite}
+.blob-2{width:500px;height:500px;background:var(--cyan);top:40%;right:-150px;animation:blobB 18s ease-in-out infinite}
+.blob-3{width:450px;height:450px;background:var(--pink);bottom:-150px;left:30%;animation:blobC 25s ease-in-out infinite}
+@keyframes blobA{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(120px,80px) scale(1.15)}66%{transform:translate(-60px,140px) scale(.9)}}
+@keyframes blobB{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-100px,-60px) scale(1.1)}66%{transform:translate(60px,-120px) scale(.85)}}
+@keyframes blobC{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(80px,-80px) scale(1.2)}66%{transform:translate(-120px,-40px) scale(.95)}}
+
+/* ═══ Nav ═══ */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 24px;transition:background .4s,border-color .4s;border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(10,10,26,0.82);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);border-bottom-color:var(--border)}
+nav .inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#a855f7);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;box-shadow:0 0 20px var(--accent-glow)}
+.logo-text{font-size:18px;font-weight:700;background:linear-gradient(135deg,#fff,var(--accent2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .nav-links{display:flex;gap:28px;align-items:center}
-.nav-links a{color:var(--text2);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a{color:var(--text2);font-size:14px;font-weight:500;transition:color .25s;position:relative}
 .nav-links a:hover{color:var(--text)}
-.nav-cta{background:var(--accent)!important;color:#fff!important;padding:7px 18px;border-radius:20px;font-weight:600!important;font-size:13px!important;transition:opacity .2s!important}
-.nav-cta:hover{opacity:.88}
+.nav-links a:not(.nav-cta)::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:var(--accent);border-radius:2px;transform:scaleX(0);transition:transform .25s}
+.nav-links a:not(.nav-cta):hover::after{transform:scaleX(1)}
+.nav-cta{background:var(--accent)!important;color:#fff!important;padding:8px 20px;border-radius:22px;font-weight:600!important;font-size:13px!important;transition:all .3s!important;box-shadow:0 0 20px var(--accent-glow)}
+.nav-cta:hover{box-shadow:0 0 30px var(--accent-glow);transform:translateY(-1px)}
 
-/* Hero */
-.hero{padding:140px 0 60px;text-align:center;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 60%);pointer-events:none}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);border-radius:100px;padding:6px 16px;margin-bottom:28px;font-size:13px;color:var(--accent);font-weight:600}
-.hero-badge .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-.hero h1{font-size:clamp(42px,7vw,76px);font-weight:800;line-height:1.08;letter-spacing:-0.035em;margin-bottom:20px;color:var(--text)}
-.hero h1 .gradient{background:linear-gradient(135deg,var(--accent),#a78bfa,#e879a0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.hero p{font-size:clamp(17px,2.2vw,21px);color:var(--text2);max-width:520px;margin:0 auto 40px;line-height:1.65}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 30px;border-radius:14px;font-size:15px;font-weight:600;text-decoration:none;transition:all .25s;border:none;cursor:pointer}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 20px rgba(99,102,241,0.25)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,0.3)}
-.btn-secondary{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{background:var(--bg3);border-color:rgba(0,0,0,0.1)}
-.btn-warm{background:linear-gradient(135deg,#f97316,#f59e0b);color:#fff;box-shadow:0 4px 20px rgba(249,115,22,0.2)}
-.btn-warm:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(249,115,22,0.28)}
+/* ═══ Hero ═══ */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 24px 60px;overflow:hidden}
+#particles{position:absolute;inset:0;z-index:1}
+.hero-content{position:relative;z-index:2}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--glass2);border:1px solid var(--border2);border-radius:100px;padding:7px 18px;margin-bottom:32px;font-size:13px;color:var(--accent2);font-weight:600;backdrop-filter:blur(10px)}
+.hero-badge .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.hero h1{font-size:clamp(38px,7vw,72px);font-weight:800;line-height:1.1;letter-spacing:-0.03em;margin-bottom:24px}
+.hero h1 .line{display:block;overflow:hidden}
+.hero h1 .line-inner{display:inline-block;animation:slideUp .8s cubic-bezier(.22,1,.36,1) both}
+.hero h1 .line:nth-child(2) .line-inner{animation-delay:.15s}
+@keyframes slideUp{from{transform:translateY(110%);opacity:0}to{transform:translateY(0);opacity:1}}
+.gradient-text{background:linear-gradient(135deg,var(--accent2),var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;background-size:200% 200%;animation:gradShift 4s ease-in-out infinite}
+@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.hero p{font-size:clamp(16px,2vw,20px);color:var(--text2);max-width:500px;margin:0 auto 40px;line-height:1.7;animation:fadeIn 1s .5s both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeIn 1s .7s both}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:15px 32px;border-radius:14px;font-size:15px;font-weight:600;transition:all .3s;border:none;cursor:pointer;position:relative;overflow:hidden}
+.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);opacity:0;transition:opacity .3s}
+.btn:hover::before{opacity:1}
+.btn-glow{background:linear-gradient(135deg,var(--accent),#a855f7);color:#fff;box-shadow:0 4px 25px var(--accent-glow)}
+.btn-glow:hover{transform:translateY(-3px);box-shadow:0 8px 40px var(--accent-glow)}
+.btn-glass{background:var(--glass2);color:var(--text);border:1px solid var(--border2);backdrop-filter:blur(10px)}
+.btn-glass:hover{background:var(--glass);border-color:var(--accent);transform:translateY(-3px)}
+.btn-warm{background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;box-shadow:0 4px 25px rgba(249,115,22,0.3)}
+.btn-warm:hover{transform:translateY(-3px);box-shadow:0 8px 40px rgba(249,115,22,0.35)}
 .btn svg{width:18px;height:18px}
+.hero-stats{display:flex;gap:40px;justify-content:center;margin-top:56px;animation:fadeIn 1s .9s both}
+.hero-stat{text-align:center}
+.hero-stat-num{font-size:28px;font-weight:800;color:var(--accent2)}
+.hero-stat-label{font-size:12px;color:var(--text3);margin-top:2px}
 
-/* Phone */
-.demo-section{padding:40px 0 80px;display:flex;justify-content:center}
-.phone{width:260px;background:var(--bg);border-radius:32px;border:1px solid var(--border);padding:14px;box-shadow:var(--shadow-lg);position:relative;transition:transform .4s}
-.phone:hover{transform:translateY(-6px)}
-.phone .notch{width:72px;height:5px;background:var(--bg3);border-radius:100px;margin:0 auto 14px}
-.contact{display:flex;align-items:center;gap:11px;padding:11px;border-radius:12px;margin-bottom:3px;transition:background .2s}
-.contact.active{background:var(--accent-soft)}
-.avatar{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;position:relative}
-.avatar .dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dotPulse 1.5s infinite}
-@keyframes dotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+/* ═══ Section shared ═══ */
+section{position:relative;z-index:1}
+.sec-pad{padding:100px 0}
+.section-tag{text-align:center;font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px}
+.section-title{text-align:center;font-size:clamp(28px,4.5vw,44px);font-weight:800;margin-bottom:16px;letter-spacing:-0.02em}
+.section-desc{text-align:center;font-size:16px;color:var(--text2);max-width:460px;margin:0 auto 56px;line-height:1.65}
+
+/* ═══ Live Demo ═══ */
+.demo{padding:80px 0}
+.demo-wrap{display:flex;align-items:center;justify-content:center;gap:80px;flex-wrap:wrap}
+.demo-phone{flex-shrink:0}
+.phone{width:270px;background:var(--surface);border-radius:36px;border:1px solid var(--border2);padding:16px;box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 40px var(--accent-glow);position:relative;transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.phone:hover{transform:translateY(-8px) rotateX(2deg)}
+.phone .notch{width:80px;height:6px;background:var(--surface2);border-radius:100px;margin:0 auto 16px}
+.contact{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;margin-bottom:4px;transition:all .35s;cursor:default;position:relative}
+.contact.active{background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2)}
+.contact:not(.active){border:1px solid transparent}
+.avatar{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;position:relative}
+.avatar .red-dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid var(--surface);box-shadow:0 0 8px rgba(239,68,68,0.6);animation:dotPulse 1.5s infinite}
+@keyframes dotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 .c-name{font-size:14px;font-weight:600;color:var(--text)}
-.c-msg{font-size:12px;color:var(--text3);margin-top:1px}
+.c-msg{font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .c-time{font-size:11px;color:var(--text3);margin-left:auto;flex-shrink:0}
+.reply-badge{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--green);color:#000;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;opacity:0;transition:all .4s}
+.reply-badge.show{opacity:1}
+.demo-info{max-width:380px}
+.demo-info h2{font-size:clamp(26px,3.5vw,36px);font-weight:800;margin-bottom:16px;letter-spacing:-0.02em}
+.demo-info p{color:var(--text2);font-size:15px;line-height:1.7;margin-bottom:20px}
+.demo-steps{display:flex;flex-direction:column;gap:14px}
+.demo-step{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--glass2);border:1px solid var(--border);border-radius:var(--radius-sm);transition:all .3s}
+.demo-step:hover{border-color:var(--accent);background:rgba(124,58,237,0.06)}
+.step-num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#a855f7);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.step-text{font-size:14px;color:var(--text2)}
+.step-text strong{color:var(--text);font-weight:600}
 
-/* Sections */
-.section-tag{text-align:center;font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
-.section-title{text-align:center;font-size:clamp(30px,4.5vw,46px);font-weight:800;margin-bottom:16px;letter-spacing:-0.025em;color:var(--text)}
-.section-desc{text-align:center;font-size:16px;color:var(--text2);max-width:480px;margin:0 auto 56px;line-height:1.6}
-
-/* Features */
-.features{padding:80px 0;background:var(--bg2)}
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.feat-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:30px 26px;transition:transform .3s,box-shadow .3s}
-.feat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
-.feat-icon{width:44px;height:44px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:22px}
-.fi-red{background:rgba(239,68,68,0.08);color:#ef4444}
-.fi-blue{background:rgba(99,102,241,0.08);color:var(--accent)}
-.fi-green{background:rgba(16,185,129,0.08);color:#10b981}
-.fi-purple{background:rgba(139,92,246,0.08);color:#8b5cf6}
-.fi-amber{background:rgba(245,158,11,0.08);color:#f59e0b}
-.fi-pink{background:rgba(236,72,153,0.08);color:#ec4899}
+/* ═══ Features ═══ */
+.features{padding:100px 0;background:linear-gradient(180deg,transparent,rgba(124,58,237,0.03),transparent)}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.feat-card{background:var(--glass2);border:1px solid var(--border);border-radius:var(--radius);padding:32px 26px;transition:transform .4s cubic-bezier(.22,1,.36,1),box-shadow .4s,border-color .4s;transform-style:preserve-3d;perspective:800px;cursor:default;position:relative;overflow:hidden}
+.feat-card::before{content:'';position:absolute;inset:0;background:radial-gradient(600px circle at var(--mouse-x,50%) var(--mouse-y,50%),rgba(124,58,237,0.08),transparent 40%);opacity:0;transition:opacity .4s}
+.feat-card:hover::before{opacity:1}
+.feat-card:hover{border-color:var(--border2);box-shadow:0 8px 40px rgba(0,0,0,0.2)}
+.feat-icon{width:48px;height:48px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:24px;position:relative}
+.fi-red{background:rgba(239,68,68,0.1);color:var(--red)}
+.fi-blue{background:rgba(99,102,241,0.1);color:var(--accent2)}
+.fi-green{background:rgba(16,185,129,0.1);color:var(--green)}
+.fi-purple{background:rgba(139,92,246,0.1);color:#a78bfa}
+.fi-amber{background:rgba(245,158,11,0.1);color:var(--amber)}
+.fi-pink{background:rgba(236,72,153,0.1);color:var(--pink)}
 .feat-card h3{font-size:17px;font-weight:700;margin-bottom:8px;color:var(--text)}
-.feat-card p{font-size:14px;color:var(--text2);line-height:1.6}
+.feat-card p{font-size:14px;color:var(--text2);line-height:1.65}
 
-/* Stats */
-.stats{padding:60px 0}
-.stats-row{display:flex;justify-content:center;gap:60px;flex-wrap:wrap}
-.stat-item{text-align:center}
-.stat-num{font-size:clamp(36px,5vw,52px);font-weight:800;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
-.stat-label{font-size:14px;color:var(--text3);margin-top:6px;font-weight:500}
+/* ═══ Red Dot Playground ═══ */
+.playground{padding:80px 0;text-align:center}
+.play-area{position:relative;width:100%;max-width:700px;height:200px;margin:0 auto;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:crosshair}
+.play-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--red);box-shadow:0 0 12px rgba(239,68,68,0.5);cursor:pointer;transition:transform .15s;animation:dotAppear .3s ease-out}
+@keyframes dotAppear{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.play-dot:hover{transform:scale(1.3)}
+.play-dot.popping{animation:dotPop .4s ease-out forwards}
+@keyframes dotPop{0%{transform:scale(1);opacity:1}50%{transform:scale(1.8);opacity:.6}100%{transform:scale(0);opacity:0}}
+.play-particle{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--green);pointer-events:none}
+.play-score{position:absolute;top:14px;right:18px;font-size:14px;font-weight:700;color:var(--accent2)}
+.play-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--text3);pointer-events:none;transition:opacity .3s}
 
-/* Apps */
-.apps{padding:40px 0 80px;text-align:center}
-.apps-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:28px}
-.apps-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.app-chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;padding:10px 22px;font-size:14px;font-weight:500;color:var(--text);transition:all .2s}
-.app-chip:hover{border-color:var(--accent);background:var(--accent-soft)}
-.app-chip span{font-size:18px}
+/* ═══ Apps ═══ */
+.apps{padding:60px 0 100px;text-align:center}
+.apps-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+.app-chip{display:flex;align-items:center;gap:8px;background:var(--glass2);border:1px solid var(--border);border-radius:100px;padding:12px 24px;font-size:14px;font-weight:500;color:var(--text);transition:all .3s;backdrop-filter:blur(8px)}
+.app-chip:hover{border-color:var(--accent);background:rgba(124,58,237,0.08);transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.15)}
+.app-chip span{font-size:20px}
 
-/* Pricing */
-.pricing{padding:80px 0;background:var(--bg2)}
-.price-card{max-width:400px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:24px;padding:40px 32px;text-align:center;position:relative;overflow:hidden;box-shadow:var(--shadow-md)}
-.price-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#a78bfa,#ec4899)}
-.price-badge{display:inline-block;background:rgba(239,68,68,0.08);color:#ef4444;font-size:12px;font-weight:700;padding:4px 14px;border-radius:100px;margin-bottom:18px}
-.price-name{font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px}
-.price-desc{font-size:14px;color:var(--text2);margin-bottom:24px}
-.price-row{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:6px}
+/* ═══ Pricing ═══ */
+.pricing{padding:100px 0;background:linear-gradient(180deg,transparent,rgba(124,58,237,0.04),transparent)}
+.price-card{max-width:420px;margin:0 auto;background:var(--surface);border:1px solid var(--border2);border-radius:28px;padding:44px 36px;text-align:center;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.price-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--cyan),var(--pink))}
+.price-card::after{content:'';position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(180deg,rgba(124,58,237,0.06),transparent);pointer-events:none}
+.price-badge{display:inline-block;background:rgba(239,68,68,0.12);color:var(--red);font-size:12px;font-weight:700;padding:5px 16px;border-radius:100px;margin-bottom:20px;position:relative;z-index:1}
+.price-name{font-size:24px;font-weight:800;margin-bottom:6px;position:relative;z-index:1}
+.price-desc{font-size:14px;color:var(--text2);margin-bottom:28px;position:relative;z-index:1}
+.price-row{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:4px;position:relative;z-index:1}
 .price-old{font-size:20px;color:var(--text3);text-decoration:line-through}
-.price-now{font-size:56px;font-weight:800;background:linear-gradient(135deg,var(--accent),#a78bfa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
-.price-unit{font-size:16px;font-weight:600;color:var(--text3)}
-.price-note{font-size:13px;color:var(--text3);margin-bottom:28px}
-.price-features{text-align:left;display:flex;flex-direction:column;gap:11px;margin-bottom:28px}
+.price-now{font-size:60px;font-weight:800;background:linear-gradient(135deg,var(--accent2),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.price-unit{font-size:15px;font-weight:600;color:var(--text3)}
+.price-note{font-size:13px;color:var(--text3);margin-bottom:28px;position:relative;z-index:1}
+.price-features{text-align:left;display:flex;flex-direction:column;gap:12px;margin-bottom:28px;position:relative;z-index:1}
 .pf{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text)}
-.pf-check{width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;font-weight:700}
-.price-wechat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-top:20px}
-.pw-label{font-size:13px;color:var(--text3);margin-bottom:6px}
-.pw-id{font-size:22px;font-weight:700;color:var(--text);font-family:'SF Mono',SFMono-Regular,Consolas,monospace;letter-spacing:.04em;cursor:pointer;user-select:all;transition:color .2s}
-.pw-id:hover{color:var(--accent)}
-.pw-hint{font-size:12px;color:var(--text3);margin-top:4px;transition:color .3s}
+.pf-check{width:22px;height:22px;border-radius:50%;background:rgba(52,211,153,0.12);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;font-weight:700}
+.price-qr{background:var(--glass2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:24px;text-align:center;position:relative;z-index:1;transition:all .3s}
+.price-qr:hover{border-color:var(--accent)}
+.qr-label{font-size:13px;color:var(--text2);margin-bottom:14px}
+.qr-img{width:180px;height:180px;border-radius:12px;object-fit:cover;border:2px solid var(--border2);margin:0 auto;display:block;transition:transform .3s}
+.qr-img:hover{transform:scale(1.05)}
+.qr-hint{font-size:12px;color:var(--text3);margin-top:12px}
 
-/* Download */
-.download{padding:80px 0;text-align:center}
-.dl-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.dl-note{font-size:13px;color:var(--text3);margin-top:18px}
-.dl-note a{color:var(--accent);text-decoration:none;font-weight:500}
+/* ═══ Download ═══ */
+.download{padding:100px 0;text-align:center}
+.dl-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.dl-note{font-size:13px;color:var(--text3);margin-top:20px}
+.dl-note a{color:var(--accent2);font-weight:500}
 .dl-note a:hover{text-decoration:underline}
 
-/* Footer */
-footer{padding:36px 0;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--text3)}
-footer a{color:var(--text3);text-decoration:none}
+/* ═══ Footer ═══ */
+footer{padding:36px 0;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--text3);position:relative;z-index:1}
+footer a{color:var(--text3)}
 footer a:hover{color:var(--text)}
 
-/* Responsive */
-@media(max-width:1024px){.feat-grid{grid-template-columns:repeat(2,1fr)}}
+/* ═══ Responsive ═══ */
+@media(max-width:1024px){.feat-grid{grid-template-columns:repeat(2,1fr)}.demo-wrap{gap:48px}}
 @media(max-width:768px){
   .nav-links a:not(.nav-cta){display:none}
-  .hero{padding:110px 0 40px}
-  .btn{padding:12px 24px;font-size:14px}
+  .hero{min-height:auto;padding:120px 20px 60px}
+  .btn{padding:13px 26px;font-size:14px}
   .feat-grid{grid-template-columns:1fr;gap:14px}
-  .feat-card{padding:22px}
+  .feat-card{padding:24px}
   .phone{width:240px}
-  .demo-section{padding:20px 0 50px}
-  .features,.pricing{padding:60px 0}
-  .stats-row{gap:36px}
-  .apps{padding:30px 0 60px}
-  .download{padding:60px 0}
-  .section-desc{margin-bottom:40px}
+  .demo-wrap{flex-direction:column;gap:36px}
+  .demo-info{text-align:center}
+  .demo-info h2{font-size:24px}
+  .demo-steps{align-items:center}
+  .pricing,.features{padding:70px 0}
+  .hero-stats{gap:24px;flex-wrap:wrap}
+  .play-area{height:160px}
+  .apps-row{gap:10px}
 }
 @media(max-width:480px){
   .container{padding:0 18px}
-  .hero h1{font-size:34px}
+  .hero h1{font-size:32px}
   .hero-btns{flex-direction:column;align-items:center}
   .hero-btns .btn{width:100%;max-width:280px;justify-content:center}
-  .phone{width:220px;padding:10px}
-  .price-card{padding:28px 20px}
-  .price-now{font-size:44px}
+  .phone{width:220px;padding:12px}
+  .price-card{padding:30px 22px}
+  .price-now{font-size:46px}
   .dl-btns{flex-direction:column;align-items:center}
   .dl-btns .btn{width:100%;max-width:280px;justify-content:center}
-  .stats-row{gap:24px}
+  .hero-stats{flex-direction:column;gap:16px}
+  .qr-img{width:150px;height:150px}
 }
 
-/* Scroll animations */
-.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+/* ═══ Scroll reveal ═══ */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1)}
 .reveal.visible{opacity:1;transform:translateY(0)}
 .reveal-delay-1{transition-delay:.1s}
 .reveal-delay-2{transition-delay:.2s}
 .reveal-delay-3{transition-delay:.3s}
+.reveal-delay-4{transition-delay:.4s}
+.reveal-delay-5{transition-delay:.5s}
+
+/* ═══ Cursor glow (desktop) ═══ */
+.cursor-glow{position:fixed;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.06),transparent 60%);pointer-events:none;z-index:0;transform:translate(-50%,-50%);transition:opacity .3s}
 </style>
 </head>
 <body>
 
+<!-- Cursor glow -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- Animated BG -->
+<div class="bg-wrap">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Nav -->
 <nav id="nav">
   <div class="inner">
     <a href="#" class="logo"><div class="logo-icon">1</div><span class="logo-text">1peng</span></a>
@@ -189,79 +257,131 @@ footer a:hover{color:var(--text)}
   </div>
 </nav>
 
+<!-- Hero -->
 <section class="hero">
-  <div class="container">
+  <canvas id="particles"></canvas>
+  <div class="hero-content">
     <div class="hero-badge"><span class="pulse"></span>v1.1.0 商业版已发布</div>
-    <h1>自动消灭小红点<br><span class="gradient">AI 帮你秒回消息</span></h1>
-    <p>智能扫描未读红点，分析对话生成回复，自动发送。一次买断，永久使用。</p>
+    <h1>
+      <span class="line"><span class="line-inner">自动消灭小红点</span></span>
+      <span class="line"><span class="line-inner"><span class="gradient-text">AI 帮你秒回消息</span></span></span>
+    </h1>
+    <p>智能扫描未读红点，分析对话上下文，生成个性化回复并自动发送。一次买断，永久使用。</p>
     <div class="hero-btns">
       <a href="#pricing" class="btn btn-warm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         限时 ¥66 购买
       </a>
-      <a href="#download" class="btn btn-secondary">
+      <a href="#download" class="btn btn-glass">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
         下载试用
       </a>
     </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num" data-target="6">0</div><div class="hero-stat-label">聊天应用</div></div>
+      <div class="hero-stat"><div class="hero-stat-num" data-target="4">0</div><div class="hero-stat-label">AI 模型</div></div>
+      <div class="hero-stat"><div class="hero-stat-num" data-target="100">0</div><div class="hero-stat-label">% 自动处理</div></div>
+    </div>
   </div>
 </section>
 
-<section class="demo-section reveal">
-  <div class="phone">
-    <div class="notch"></div>
-    <div class="contact"><div class="avatar" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">张</div><div><div class="c-name">张总</div><div class="c-msg">方案明天能交吗？</div></div><div class="c-time">10:32</div></div>
-    <div class="contact active"><div class="avatar" style="background:linear-gradient(135deg,#10b981,#34d399)">李<div class="dot"></div></div><div><div class="c-name">李经理</div><div class="c-msg">周末有空聊聊项目吗</div></div><div class="c-time">10:28</div></div>
-    <div class="contact"><div class="avatar" style="background:linear-gradient(135deg,#f59e0b,#f472b6)">王<div class="dot"></div></div><div><div class="c-name">小王</div><div class="c-msg">文件发你了，看看</div></div><div class="c-time">10:15</div></div>
-    <div class="contact"><div class="avatar" style="background:linear-gradient(135deg,#8b5cf6,#c084fc)">家</div><div><div class="c-name">家庭群</div><div class="c-msg">妈：晚上回来吃饭吗</div></div><div class="c-time">09:58</div></div>
+<!-- Live Demo -->
+<section class="demo sec-pad">
+  <div class="container">
+    <div class="demo-wrap">
+      <div class="demo-phone reveal">
+        <div class="phone" id="demoPhone">
+          <div class="notch"></div>
+          <div class="contact" data-idx="0">
+            <div class="avatar" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">张</div>
+            <div><div class="c-name">张总</div><div class="c-msg">方案明天能交吗？</div></div>
+            <div class="c-time">10:32</div>
+            <div class="reply-badge">已回复</div>
+          </div>
+          <div class="contact active" data-idx="1">
+            <div class="avatar" style="background:linear-gradient(135deg,#10b981,#34d399)">李<div class="red-dot"></div></div>
+            <div><div class="c-name">李经理</div><div class="c-msg">周末有空聊聊项目吗</div></div>
+            <div class="c-time">10:28</div>
+            <div class="reply-badge">已回复</div>
+          </div>
+          <div class="contact" data-idx="2">
+            <div class="avatar" style="background:linear-gradient(135deg,#f59e0b,#f472b6)">王<div class="red-dot"></div></div>
+            <div><div class="c-name">小王</div><div class="c-msg">文件发你了，看看</div></div>
+            <div class="c-time">10:15</div>
+            <div class="reply-badge">已回复</div>
+          </div>
+          <div class="contact" data-idx="3">
+            <div class="avatar" style="background:linear-gradient(135deg,#8b5cf6,#c084fc)">家</div>
+            <div><div class="c-name">家庭群</div><div class="c-msg">妈：晚上回来吃饭吗</div></div>
+            <div class="c-time">09:58</div>
+            <div class="reply-badge">已回复</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-info reveal reveal-delay-2">
+        <h2>全流程自动化<br><span class="gradient-text">从检测到回复</span></h2>
+        <p>1peng 像真人一样操作你的电脑——扫描红点、阅读对话、思考回复、模拟打字、自动发送。整个过程无需你参与。</p>
+        <div class="demo-steps">
+          <div class="demo-step"><div class="step-num">1</div><div class="step-text"><strong>扫描红点</strong> — BFS 连通域分析，精准定位每一个未读通知</div></div>
+          <div class="demo-step"><div class="step-num">2</div><div class="step-text"><strong>AI 理解对话</strong> — 读取上下文，理解对话意图和情绪</div></div>
+          <div class="demo-step"><div class="step-num">3</div><div class="step-text"><strong>拟真发送</strong> — 模拟人类打字节奏，拒绝机器感</div></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
+<!-- Features -->
 <section class="features" id="features">
   <div class="container">
     <div class="section-tag reveal">核心能力</div>
     <div class="section-title reveal">精准识别，智能回复</div>
-    <div class="section-desc reveal">从检测到回复，全链路自动化，让你告别逐条手动回复。</div>
+    <div class="section-desc reveal">六大核心技术，让每一条消息都得到恰到好处的回应。</div>
     <div class="feat-grid">
-      <div class="feat-card reveal reveal-delay-1"><div class="feat-icon fi-red">&#9679;</div><h3>红点精准检测</h3><p>BFS 连通域分析，四重形状校验，只认标准圆形通知红点，零误触。</p></div>
-      <div class="feat-card reveal reveal-delay-2"><div class="feat-icon fi-blue">&#128172;</div><h3>对话结构验证</h3><p>像素级分析左右气泡布局，自动跳过公众号、文件助手等非对话窗口。</p></div>
-      <div class="feat-card reveal reveal-delay-3"><div class="feat-icon fi-green">&#128683;</div><h3>不回复名单</h3><p>OCR 识别联系人名称，名单中的联系人自动跳过，其余全部回复。</p></div>
-      <div class="feat-card reveal reveal-delay-1"><div class="feat-icon fi-purple">&#129302;</div><h3>多模型切换</h3><p>DeepSeek、MiniMax、小米、豆包四大模型随切随用，支持自定义接入。</p></div>
-      <div class="feat-card reveal reveal-delay-2"><div class="feat-icon fi-amber">&#128218;</div><h3>知识库加持</h3><p>接入 Obsidian Vault，回复时自动检索相关笔记，让 AI 懂你的专业知识。</p></div>
-      <div class="feat-card reveal reveal-delay-3"><div class="feat-icon fi-pink">&#9201;</div><h3>拟真延迟</h3><p>生成回复后等待数秒再发送，模拟真人节奏，拒绝秒回的机器感。</p></div>
+      <div class="feat-card reveal reveal-delay-1" data-tilt><div class="feat-icon fi-red">&#9679;</div><h3>红点精准检测</h3><p>BFS 连通域分析，四重形状校验，只认标准圆形通知红点，零误触。</p></div>
+      <div class="feat-card reveal reveal-delay-2" data-tilt><div class="feat-icon fi-blue">&#128172;</div><h3>对话结构验证</h3><p>像素级分析左右气泡布局，自动跳过公众号、文件助手等非对话窗口。</p></div>
+      <div class="feat-card reveal reveal-delay-3" data-tilt><div class="feat-icon fi-green">&#128683;</div><h3>不回复名单</h3><p>OCR 识别联系人名称，名单中的联系人自动跳过，其余全部回复。</p></div>
+      <div class="feat-card reveal reveal-delay-1" data-tilt><div class="feat-icon fi-purple">&#129302;</div><h3>多模型切换</h3><p>DeepSeek、MiniMax、小米、豆包四大模型随切随用，也支持自定义接入。</p></div>
+      <div class="feat-card reveal reveal-delay-2" data-tilt><div class="feat-icon fi-amber">&#128218;</div><h3>知识库加持</h3><p>接入 Obsidian Vault，回复时自动检索相关笔记，让 AI 懂你的专业知识。</p></div>
+      <div class="feat-card reveal reveal-delay-3" data-tilt><div class="feat-icon fi-pink">&#9201;</div><h3>拟真延迟</h3><p>生成回复后等待数秒再发送，模拟真人节奏，告别秒回的机器感。</p></div>
     </div>
   </div>
 </section>
 
-<section class="stats">
+<!-- Red Dot Playground -->
+<section class="playground">
   <div class="container">
-    <div class="stats-row">
-      <div class="stat-item reveal"><div class="stat-num" data-target="6">0</div><div class="stat-label">支持聊天应用</div></div>
-      <div class="stat-item reveal reveal-delay-1"><div class="stat-num" data-target="4">0</div><div class="stat-label">内置 AI 模型</div></div>
-      <div class="stat-item reveal reveal-delay-2"><div class="stat-num" data-target="100">0</div><div class="stat-label">% 自动处理</div></div>
+    <div class="section-tag reveal">试试看</div>
+    <div class="section-title reveal">点击消灭小红点</div>
+    <div class="section-desc reveal">体验自动消除的快感——每次点击都会触发粒子爆炸效果。</div>
+    <div class="play-area reveal" id="playArea">
+      <div class="play-score">已消灭: <span id="playScore">0</span></div>
+      <div class="play-hint" id="playHint">点击红点消灭它们</div>
     </div>
   </div>
 </section>
 
-<section class="apps reveal">
+<!-- Apps -->
+<section class="apps">
   <div class="container">
-    <div class="apps-title">支持的聊天应用</div>
+    <div class="section-title reveal">全平台覆盖</div>
     <div class="apps-row">
-      <div class="app-chip"><span>&#128172;</span> 微信</div>
-      <div class="app-chip"><span>&#127970;</span> 企业微信</div>
-      <div class="app-chip"><span>&#128204;</span> 钉钉</div>
-      <div class="app-chip"><span>&#128038;</span> 飞书</div>
-      <div class="app-chip"><span>&#128188;</span> Slack</div>
-      <div class="app-chip"><span>&#9992;&#65039;</span> Telegram</div>
+      <div class="app-chip reveal reveal-delay-1"><span>&#128172;</span> 微信</div>
+      <div class="app-chip reveal reveal-delay-2"><span>&#127970;</span> 企业微信</div>
+      <div class="app-chip reveal reveal-delay-3"><span>&#128204;</span> 钉钉</div>
+      <div class="app-chip reveal reveal-delay-4"><span>&#128038;</span> 飞书</div>
+      <div class="app-chip reveal reveal-delay-5"><span>&#128188;</span> Slack</div>
+      <div class="app-chip reveal reveal-delay-5"><span>&#9992;&#65039;</span> Telegram</div>
     </div>
   </div>
 </section>
 
+<!-- Pricing -->
 <section class="pricing" id="pricing">
   <div class="container">
     <div class="section-tag reveal">定价</div>
     <div class="section-title reveal">一次买断，永久使用</div>
-    <div class="section-desc reveal">无需订阅，没有隐藏费用。</div>
+    <div class="section-desc reveal">无需订阅，没有隐藏费用。扫码添加客服微信即可购买。</div>
     <div class="price-card reveal">
       <div class="price-badge">限时优惠</div>
       <div class="price-name">专业版</div>
@@ -280,72 +400,192 @@ footer a:hover{color:var(--text)}
         <div class="pf"><div class="pf-check">&#10003;</div>不回复名单</div>
         <div class="pf"><div class="pf-check">&#10003;</div>后续版本免费升级</div>
       </div>
-      <a href="#download" class="btn btn-warm" style="width:100%;justify-content:center">立即下载体验</a>
-      <div class="price-wechat">
-        <div class="pw-label">添加客服微信购买激活码</div>
-        <div class="pw-id" id="wechatId" title="点击复制">Roooxo</div>
-        <div class="pw-hint" id="copyHint">点击微信号一键复制</div>
+      <a href="#download" class="btn btn-warm" style="width:100%;justify-content:center;position:relative;z-index:1">立即下载体验</a>
+      <div class="price-qr">
+        <div class="qr-label">扫码添加客服微信购买激活码</div>
+        <img class="qr-img" src="wechat-qr.jpg" alt="客服微信二维码">
+        <div class="qr-hint">微信扫一扫，添加客服</div>
       </div>
     </div>
   </div>
 </section>
 
+<!-- Download -->
 <section class="download" id="download">
   <div class="container">
     <div class="section-title reveal">开始自动回复</div>
     <div class="section-desc reveal">下载安装后输入激活码即可使用，支持 Windows 和 macOS。</div>
-    <div class="dl-btns">
-      <a href="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0-setup.exe" class="btn btn-primary">
+    <div class="dl-btns reveal">
+      <a href="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0-setup.exe" class="btn btn-glow">
         <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 12V6.75l6-1.32v6.48L3 12zm17-9v17l-8-2.18V3.18L20 3zM5.15 17.85l8.2 2.23v-5.82l-8.2 1.2v2.39zM17 20.65V15l-5-1.2v5.47l5 1.38z"/></svg>
         Windows 下载
       </a>
-      <a href="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0.dmg" class="btn btn-secondary">
+      <a href="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0.dmg" class="btn btn-glass">
         <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         macOS 下载
       </a>
     </div>
-    <div class="dl-note">没有激活码？<a href="#pricing">查看定价</a> 或添加客服微信 <strong>Roooxo</strong> 购买</div>
+    <div class="dl-note reveal">没有激活码？<a href="#pricing">查看定价</a> 或扫码添加客服微信购买</div>
   </div>
 </section>
 
 <footer>
-  <div class="container"><p>&copy; 2026 1peng &middot; <a href="https://github.com/Ethanvibe/IMagent">GitHub</a> &middot; 客服微信 Roooxo</p></div>
+  <div class="container"><p>&copy; 2026 1peng &middot; <a href="https://github.com/Ethanvibe/IMagent">GitHub</a></p></div>
 </footer>
 
 <script>
-// Nav scroll
-const nav = document.getElementById('nav');
-window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 10));
+/* ═══ Cursor Glow ═══ */
+const glow = document.getElementById('cursorGlow');
+let mx=0,my=0,gx=0,gy=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function glowLoop(){gx+=(mx-gx)*.08;gy+=(my-gy)*.08;glow.style.left=gx+'px';glow.style.top=gy+'px';requestAnimationFrame(glowLoop)})();
 
-// Scroll reveal
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
-}, { threshold: 0.12 });
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+/* ═══ Nav scroll ═══ */
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',window.scrollY>10));
 
-// Number counter
-const cObs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      const el = e.target;
-      const t = parseInt(el.dataset.target);
-      let c = 0;
-      const s = Math.max(1, Math.floor(t / 40));
-      const timer = setInterval(() => { c += s; if (c >= t) { c = t; clearInterval(timer); } el.textContent = c; }, 30);
+/* ═══ Particle System ═══ */
+const cvs=document.getElementById('particles');
+const ctx=cvs.getContext('2d');
+let W,H;
+function resize(){W=cvs.width=cvs.offsetWidth;H=cvs.height=cvs.offsetHeight}
+resize();window.addEventListener('resize',resize);
+const dots=[];
+function spawnDot(){
+  if(dots.length>=25)return;
+  dots.push({x:Math.random()*W,y:Math.random()*H,r:3+Math.random()*4,
+    vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,
+    alpha:0,targetAlpha:.4+Math.random()*.4,alive:true,age:0})
+}
+for(let i=0;i<15;i++)spawnDot();
+setInterval(spawnDot,800);
+function drawParticles(){
+  ctx.clearRect(0,0,W,H);
+  for(let i=dots.length-1;i>=0;i--){
+    const d=dots[i];
+    d.x+=d.vx;d.y+=d.vy;d.age++;
+    if(d.alpha<d.targetAlpha)d.alpha+=.01;
+    if(d.x<0||d.x>W||d.y<0||d.y>H){dots.splice(i,1);continue}
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(239,68,68,${d.alpha})`;ctx.fill();
+    /* glow */
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r*3,0,Math.PI*2);
+    const g=ctx.createRadialGradient(d.x,d.y,d.r,d.x,d.y,d.r*3);
+    g.addColorStop(0,`rgba(239,68,68,${d.alpha*.3})`);g.addColorStop(1,'rgba(239,68,68,0)');
+    ctx.fillStyle=g;ctx.fill();
+  }
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+/* ═══ Scroll Reveal ═══ */
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}});
+},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* ═══ Number Counter ═══ */
+const cObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const el=e.target,t=parseInt(el.dataset.target);
+      let c=0;const s=Math.max(1,Math.floor(t/40));
+      const timer=setInterval(()=>{c+=s;if(c>=t){c=t;clearInterval(timer)}el.textContent=c},30);
       cObs.unobserve(el);
     }
   });
-}, { threshold: 0.5 });
-document.querySelectorAll('.stat-num').forEach(el => cObs.observe(el));
+},{threshold:.5});
+document.querySelectorAll('[data-target]').forEach(el=>cObs.observe(el));
 
-// Copy WeChat
-document.getElementById('wechatId').addEventListener('click', function() {
-  navigator.clipboard.writeText('Roooxo').then(() => {
-    const h = document.getElementById('copyHint');
-    h.textContent = '已复制，去微信搜索添加吧';
-    h.style.color = '#10b981';
-    setTimeout(() => { h.textContent = '点击微信号一键复制'; h.style.color = ''; }, 2500);
+/* ═══ 3D Tilt on Feature Cards ═══ */
+document.querySelectorAll('[data-tilt]').forEach(card=>{
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect();
+    const x=e.clientX-r.left,y=e.clientY-r.top;
+    const cx=r.width/2,cy=r.height/2;
+    const rotX=((y-cy)/cy)*-6;
+    const rotY=((x-cx)/cx)*6;
+    card.style.transform=`perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-4px)`;
+    card.style.setProperty('--mouse-x',x+'px');
+    card.style.setProperty('--mouse-y',y+'px');
   });
+  card.addEventListener('mouseleave',()=>{
+    card.style.transform='';
+  });
+});
+
+/* ═══ Phone Demo Auto-Reply ═══ */
+(function demoLoop(){
+  const contacts=document.querySelectorAll('.contact');
+  let idx=0;
+  function step(){
+    contacts.forEach(c=>{c.classList.remove('active');c.querySelector('.reply-badge').classList.remove('show')});
+    const c=contacts[idx];
+    c.classList.add('active');
+    const dot=c.querySelector('.red-dot');
+    setTimeout(()=>{
+      if(dot)dot.style.display='none';
+      c.querySelector('.reply-badge').classList.add('show');
+      idx=(idx+1)%contacts.length;
+      setTimeout(()=>{
+        c.querySelector('.reply-badge').classList.remove('show');
+        if(dot)dot.style.display='';
+        step();
+      },1500);
+    },2000);
+  }
+  setTimeout(step,1500);
+})();
+
+/* ═══ Red Dot Playground ═══ */
+(function playground(){
+  const area=document.getElementById('playArea');
+  const scoreEl=document.getElementById('playScore');
+  const hintEl=document.getElementById('playHint');
+  let score=0;
+  function spawnPlayDot(){
+    const rect=area.getBoundingClientRect();
+    const dot=document.createElement('div');
+    dot.className='play-dot';
+    const x=30+Math.random()*(rect.width-60);
+    const y=40+Math.random()*(rect.height-80);
+    dot.style.left=x+'px';dot.style.top=y+'px';
+    dot.addEventListener('click',e=>{
+      e.stopPropagation();
+      dot.classList.add('popping');
+      score++;scoreEl.textContent=score;
+      hintEl.style.opacity='0';
+      /* particles */
+      for(let i=0;i<8;i++){
+        const p=document.createElement('div');
+        p.className='play-particle';
+        p.style.left=dot.style.left;p.style.top=dot.style.top;
+        const angle=Math.random()*Math.PI*2;
+        const dist=30+Math.random()*40;
+        const tx=Math.cos(angle)*dist;
+        const ty=Math.sin(angle)*dist;
+        p.style.transition='all .5s cubic-bezier(.22,1,.36,1)';
+        area.appendChild(p);
+        requestAnimationFrame(()=>{
+          p.style.transform=`translate(${tx}px,${ty}px)`;
+          p.style.opacity='0';
+        });
+        setTimeout(()=>p.remove(),500);
+      }
+      setTimeout(()=>dot.remove(),400);
+    });
+    area.appendChild(dot);
+  }
+  for(let i=0;i<8;i++)setTimeout(()=>spawnPlayDot(),i*200);
+  setInterval(()=>{if(area.querySelectorAll('.play-dot:not(.popping)').length<12)spawnPlayDot()},1000);
+})();
+
+/* ═══ Parallax on blobs ═══ */
+window.addEventListener('scroll',()=>{
+  const s=window.scrollY;
+  document.querySelector('.blob-1').style.transform=`translateY(${s*.08}px)`;
+  document.querySelector('.blob-2').style.transform=`translateY(${s*-.06}px)`;
+  document.querySelector('.blob-3').style.transform=`translateY(${s*.04}px)`;
 });
 </script>
 </body>
