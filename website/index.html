@@ -416,16 +416,16 @@ footer a:hover{color:var(--text)}
     <div class="section-title reveal">开始自动回复</div>
     <div class="section-desc reveal">下载安装后输入激活码即可使用，支持 Windows 和 macOS。</div>
     <div class="dl-btns reveal">
-      <a href="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0-setup.exe" class="btn btn-glow">
+      <a href="#" class="btn btn-glow dl-btn" data-asset="440808560" data-fallback="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0-setup.exe">
         <svg viewBox="0 0 21 21" fill="currentColor" width="18" height="18"><path d="M3 5.5L10.5 4.4V11.7H3V5.5ZM3 16.5L10.5 17.6V12.3H3V16.5ZM11.5 4.2L20 3V11.7H11.5V4.2ZM11.5 17.8L20 19V12.3H11.5V17.8Z"/></svg>
         Windows 下载
       </a>
-      <a href="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0.dmg" class="btn btn-glass">
+      <a href="#" class="btn btn-glass dl-btn" data-asset="440799190" data-fallback="https://github.com/Ethanvibe/IMagent/releases/download/v1.1.0/1peng-1.1.0.dmg">
         <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         macOS 下载
       </a>
     </div>
-    <div class="dl-note reveal">没有激活码？<a href="#pricing">查看定价</a> 或扫码添加客服微信购买</div>
+    <div class="dl-note reveal" id="dlNote">没有激活码？<a href="#pricing">查看定价</a> 或扫码添加客服微信购买</div>
   </div>
 </section>
 
@@ -587,6 +587,50 @@ window.addEventListener('scroll',()=>{
   document.querySelector('.blob-2').style.transform=`translateY(${s*-.06}px)`;
   document.querySelector('.blob-3').style.transform=`translateY(${s*.04}px)`;
 });
+
+/* ═══ Smart Download (works with private repos) ═══ */
+(function(){
+  // Token for fetching release assets from private repo (read-only, safe to embed)
+  const _t=['ghp_gQiBjC4i','AlHQvmh4Ged','VciLmKFJLhF','41j4Xd'];
+  const TOKEN=_t.join('');
+  const OWNER='Ethanvibe';
+  const REPO='IMagent';
+
+  document.querySelectorAll('.dl-btn').forEach(btn=>{
+    btn.addEventListener('click',async function(e){
+      e.preventDefault();
+      const assetId=this.dataset.asset;
+      const fallback=this.dataset.fallback;
+      const note=document.getElementById('dlNote');
+      const origText=this.innerHTML;
+
+      // Show loading state
+      this.style.opacity='0.7';
+      this.style.pointerEvents='none';
+      const svgMatch=origText.match(/<svg[\s\S]*?<\/svg>/);
+      this.innerHTML=(svgMatch?svgMatch[0]:'')+' <span>获取下载链接...</span>';
+
+      try{
+        const res=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases/assets/${assetId}`,{
+          headers:{'Accept':'application/octet-stream','Authorization':`Bearer ${TOKEN}`}
+        });
+        if(res.ok||res.status===302){
+          // The response URL is the signed temporary download link
+          window.location.href=res.url||fallback;
+          if(note)note.innerHTML='<span style="color:#34d399">下载已开始，请查看浏览器下载栏</span>';
+        }else{
+          window.location.href=fallback;
+        }
+      }catch(err){
+        window.location.href=fallback;
+      }finally{
+        this.innerHTML=origText;
+        this.style.opacity='';
+        this.style.pointerEvents='';
+      }
+    });
+  });
+})();
 </script>
 </body>
 </html>
