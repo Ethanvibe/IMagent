@@ -17,23 +17,50 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
+
+      # ──────────────────────────────────────────────────────────
+      # Code Signing (optional — skips if secrets are not set)
+      #
+      # To enable signing, add these secrets to your GitHub repo:
+      #   CSC_LINK           — Base64-encoded .p12 certificate
+      #   CSC_KEY_PASSWORD   — Password for the .p12 certificate
+      #
+      # To enable notarization, also add:
+      #   APPLE_ID                    — Apple ID email
+      #   APPLE_APP_SPECIFIC_PASSWORD — App-specific password
+      #   APPLE_TEAM_ID               — Team ID from Apple Developer
+      # ──────────────────────────────────────────────────────────
+      - name: Import Code-Signing Certificate
+        if: ${{ secrets.CSC_LINK != '' && secrets.CSC_KEY_PASSWORD != '' }}
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.CSC_LINK }}
+          p12-password: ${{ secrets.CSC_KEY_PASSWORD }}
 
       - name: Build macOS app
         run: npm run build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass signing secrets to electron-builder (ignored if empty)
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # Notarization credentials (ignored if empty)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 1peng-mac
+          name: 1peng-mac-dmg
           path: dist/*.dmg
           retention-days: 30
 
-      - name: Upload ZIP artifact (if no DMG)
+      - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
