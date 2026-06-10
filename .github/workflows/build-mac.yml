@@ -35,7 +35,7 @@ jobs:
       #   APPLE_TEAM_ID               — Team ID from Apple Developer
       # ──────────────────────────────────────────────────────────
       - name: Import Code-Signing Certificate
-        if: ${{ secrets.CSC_LINK != '' && secrets.CSC_KEY_PASSWORD != '' }}
+        if: ${{ env.CSC_LINK != '' && env.CSC_KEY_PASSWORD != '' }}
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.CSC_LINK }}
